@@ -1,0 +1,260 @@
+
+
+library(tidyverse)
+library(haven)
+library(dplyr)
+library(mfx)
+library(texreg)
+library(ggplot2)
+
+
+# load dataset
+load("data/masterdataset.RData")
+
+##############
+# data cleaning: making variables ready for analysis
+
+data.analysis <-
+  masterdataset %>%
+  mutate(police.stopped_14 = police.stopped_14 == 1,
+         police.arrested_14 = police.arrested_14 == 1,
+         police.warning_14 = police.warning_14 == 1,
+         male = gender == 1,
+         white = case_when(
+           ethnicity == 1 ~ TRUE,
+           ethnicity == 2 ~ TRUE,
+           ethnicity == 3 ~ TRUE,
+           ethnicity == 4 ~ TRUE,
+           TRUE ~ FALSE
+         ),
+         white_GB = ethnicity == 1,
+         area_safety_14 = na_if(area_safety_14, -9),
+         area_safety_14 = na_if(area_safety_14, -8),
+         carrying_knife_14 = carrying_knife_14 == 1,
+         physical_aggression_hit_14 = physical_aggression_hit_14 == 1,
+         physical_aggression_weapon_14 = physical_aggression_weapon_14 == 1,
+         theft_stolen_14 = theft_stolen_14 == 1,
+         theft_taken_14 = theft_taken_14 == 1, # addition
+         street_gang_14 = street_gang_14 == 1,
+         cannabis_use_14 = cannabis_use_14 == 1,
+         drinking_ever_14 = drinking_ever_14 == 1, # addition
+         victim_threatened_14 = victim_threatened_14 == 1,
+         victim_violent_14 = victim_violent_14 == 1,
+         victim_weapon_14 = victim_weapon_14 == 1,
+         victim_stolen_14 = victim_stolen_14 == 1,
+         physical_aggression_hit_17 = physical_aggression_hit_17 == 1,
+         physical_aggression_weapon_17 = physical_aggression_weapon_17 == 1,
+         theft_stolen_17 = theft_stolen_17 == 1,
+         theft_taken_17 = theft_taken_17 == 1,
+         victim_threatened_17 = victim_threatened_14 == 1,
+         victim_violent_17 = victim_violent_17 == 1,
+         victim_weapon_17 = victim_weapon_17 == 1,
+         victim_stolen_17 = victim_stolen_17 == 1
+         )
+
+  
+
+
+# list of covariates
+covs_14 <- 'white_GB + male + area_safety_14 + carrying_knife_14 + physical_aggression_hit_14 + physical_aggression_weapon_14 + 
+        theft_stolen_14 + theft_taken_14 + street_gang_14 + cannabis_use_14 + drinking_ever_14 + 
+         victim_threatened_14 + victim_violent_14 + victim_weapon_14 + victim_stolen_14'
+
+covs_17 <- 'white_GB + male + area_safety_14  + + street_gang_14 + cannabis_use_14 + drinking_ever_14 + 
+         victim_threatened_14 + victim_violent_14 + victim_weapon_14 + victim_stolen_14+ police.stopped_14'
+# + police.warning_14 + police.arrested_14'
+          
+         
+
+# estimate regression models
+m.stop <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14))), data.analysis, family = binomial(link = 'logit'))
+m.warning <- glm(as.formula(paste('police.warning_14', '~', paste(covs_14))), data.analysis, family = binomial(link = 'logit'))
+m.arrest <- glm(as.formula(paste('police.arrested_14', '~', paste(covs_14))), data.analysis, family = binomial(link = 'logit'))
+
+#offending behaviour _ outcome1
+m1a.aggression_hit <- glm(as.formula(paste('physical_aggression_hit_17', '~', paste(covs_17, ' + physical_aggression_hit_14'))), data.analysis, family = binomial(link = 'logit'))
+m1b.aggression_hit <- glm(as.formula(paste('physical_aggression_hit_17', '~', paste(covs_17,' + physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14' ))), data.analysis, family = binomial(link = 'logit'))
+m1c.aggression_hit <- glm(as.formula(paste('physical_aggression_hit_17', '~', paste(covs_17,'+ physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14 + white_GB*police.stopped_14' ))), data.analysis, family = binomial(link = 'logit'))
+
+#offending behaviour _ outcome2
+m2a.aggression_weapon <- glm(as.formula(paste('physical_aggression_weapon_17', '~', paste(covs_17, '+ physical_aggression_weapon_14'))), data.analysis, family = binomial(link = 'logit'))
+m2b.aggression_weapon <- glm(as.formula(paste('physical_aggression_weapon_17', '~', paste(covs_17, ' + physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14' ))), data.analysis, family = binomial(link = 'logit'))
+m2c.aggression_weapon <- glm(as.formula(paste('physical_aggression_weapon_17', '~', paste(covs_17,'+ physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14 + white_GB*police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
+
+#offending behaviour _ outcome3
+m3a.theft_stolen <- glm(as.formula(paste('theft_stolen_17', '~', paste(covs_17, ' + theft_stolen_14'))), data.analysis, family = binomial(link = 'logit'))
+m3b.theft_stolen <- glm(as.formula(paste('theft_stolen_17', '~', paste(covs_17, ' + physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14' ))), data.analysis, family = binomial(link = 'logit'))
+m3c.theft_stolen <- glm(as.formula(paste('theft_stolen_17', '~', paste(covs_17, '+ physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14+ white_GB*police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
+
+#offending behaviour _ outcome4
+m4a.theft_taken <- glm(as.formula(paste('theft_taken_17', '~', paste(covs_17,'+ theft_taken_14'))), data.analysis, family = binomial(link = 'logit'))
+m4b.theft_taken <- glm(as.formula(paste('theft_taken_17', '~', paste(covs_17, ' + physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14' ))), data.analysis, family = binomial(link = 'logit'))
+m4c.theft_taken <- glm(as.formula(paste('theft_taken_17', '~', paste(covs_17, '+ physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_stolen_14 + theft_taken_14 + white_GB*police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
+
+
+
+# summarise regression results
+list(m.stop, m.warning, m.arrest) %>% screenreg(ci.force = T)
+
+list(m1a.aggression_hit, m2a.aggression_weapon, m3a.theft_stolen ,m4a.theft_taken) %>% screenreg(ci.force = T)
+list(m1b.aggression_hit, m2b.aggression_weapon, m3b.theft_stolen, m4b.theft_taken) %>% screenreg(ci.force = T)
+list(m1c.aggression_hit, m2c.aggression_weapon, m3c.theft_stolen, m4c.theft_taken) %>% screenreg(ci.force = T)
+
+
+
+# calculate marginal effects to report results in probability scale
+m.stop_prob <- logitmfx(m.stop, data = data.analysis, atmean = T)
+m.warning_prob <- logitmfx(m.warning, data = data.analysis, atmean = T)
+m.arrest_prob <- logitmfx(m.arrest, data = data.analysis, atmean = T)
+
+m.aggression_hit_prob <- logitmfx(m1b.aggression_hit, data = data.analysis, atmean = T)
+m.aggression_weapon_prob <- logitmfx(m2b.aggression_weapon, data = data.analysis, atmean = T)
+m.theft_stolen_prob <- logitmfx(m3b.theft_stolen, data = data.analysis, atmean = T)
+m.theft_taken_prob <- logitmfx(m4b.theft_taken, data = data.analysis, atmean = T)
+
+m.aggression_hit_probX <- logitmfx(m1c.aggression_hit, data = data.analysis, atmean = T) # only for full models with interact term
+m.aggression_weapon_probX <- logitmfx(m2c.aggression_weapon, data = data.analysis, atmean = T)
+m.theft_stolen_probX <- logitmfx(m3c.theft_stolen, data = data.analysis, atmean = T)
+m.theft_taken_probX <- logitmfx(m4c.theft_taken, data = data.analysis, atmean = T)
+
+#############################
+### plots ###
+data.plot <-
+  m.stop_prob$mfxest %>%
+  as_tibble() %>%
+  mutate(model = "stop") %>%
+  bind_rows(m.warning_prob$mfxest %>%
+              as.tibble() %>%
+              mutate(model = "warning")) %>%
+  bind_rows(m.arrest_prob$mfxest %>%
+              as.tibble() %>%
+              mutate(model = "arrest")) %>%
+  mutate(model = factor(model, levels = c('arrest', 'warning', 'stop')),
+         ci.low = `dF/dx` - 2 *`Std. Err.`,
+         ci.upp = `dF/dx` + 2 *`Std. Err.`,
+         vars = c('Victimised: Stolen', 'Victimised: Weapon', 'Victimised: Violence', 'Victimised: threatened', 'Drinking', 'Cannabis use', 'Street gang', 
+                  'Offending behaviour: theft', 'Offending behaviour: stolen', 
+                  'Physical aggression: weapon', 'Physical aggression: hit', 'Knife carrying', 'Area safety', 'Male', 'White') %>% rev %>% rep(3))
+           
+#           c('white_GB', 'male', 'area_safety_14', 'carrying_knife_14' , 'physical_aggression_hit_14' , 'physical_aggression_weapon_14' ,
+#        'theft_stolen_14' , 'theft_taken_14' , 'street_gang_14' , 'cannabis_use_14' , 'drinking_ever_14' ,
+#         'victim_threatened_14' , 'victim_violent_14' , 'victim_weapon_14' , 'victim_stolen_14') %>% rep(3))
+
+
+
+# produce plot
+plot.results <- ggplot(data.plot, aes(y = `dF/dx`, x = vars, group = model, colour = model)) +
+  geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .75, position = position_dodge(), size = .75, lwd = .75, show.legend = T) +
+  ylim(-.1,.4) +
+  geom_hline(yintercept = 0, size = .75, color = 'darkgray') +
+  coord_flip() +
+  ylab("") + xlab("") +
+  ggtitle("Probability of police contact by age 14") +
+  labs(caption = 'Binomial logistic regression models estimated using maximum likelihood.
+                  Marginal effects at the mean (probability) 95% confidence intervals reported. \n
+
+                  n = 7524 for all three models') +
+  guides(colour = guide_legend(title = "")) +
+  theme(plot.title = element_text(hjust = .5, vjust = 2, colour = "#3C3C3C", size = 12)) +
+  theme(axis.text.y = element_text(colour = "#3C3C3C", size = 11),
+        axis.text.x = element_text(colour = "#3C3C3C", size = 8, margin = margin(0, 0, 0, 0))) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "#3C3C3C", size = .2),
+        legend.title = element_text(colour = "#3C3C3C", size = 12),
+        legend.text = element_text(colour = "#3C3C3C", size = 12),
+        strip.text.x = element_text(size = 10),
+        panel.spacing.x=unit(1, "lines"),
+        panel.spacing.y=unit(1, "lines"),
+        plot.caption = element_text(hjust = 1,margin = unit(c(0,0,0,0), "mm")),
+        plot.margin = margin(.5, 0, .5, 0, "cm")) +
+  theme(aspect.ratio = 3) +
+  scale_x_discrete(limits = c('Victimised: Stolen', 'Victimised: Weapon', 'Victimised: threatened', 'Cannabis use', 'Street gang', 'Offending behaviour: theft',
+                              'Physical aggression: weapon', 'Physical aggression: hit', 'Knife carrying', 'Area safety', 'Male', 'White'),
+                   breaks = c('Victimised: Stolen', 'Victimised: Weapon', 'Victimised: threatened', 'Cannabis use', 'Street gang', 'Offending behaviour: theft',
+                              'Physical aggression: weapon', 'Physical aggression: hit', 'Knife carrying', 'Area safety', 'Male', 'White'),
+                   labels = c('Victimised: Stolen', 'Victimised: Weapon', 'Victimised: threatened', 'Cannabis use', 'Street gang', 'Offending behaviour: theft',
+                              'Physical aggression: weapon', 'Physical aggression: hit', 'Knife carrying', 'Area safety', 'Male', 'White')) +
+  scale_colour_discrete(limits = c('stop', 'warning', 'arrest'),
+                        breaks = c('stop', 'warning', 'arrest'),
+                        labels = c('Stopped by the police', 'Stopped and warned', 'Stopped and arrested'))
+
+# save results in pdf format in a subfolder named 'plots'
+pdf('plots/policecontact14.pdf')
+plot.results
+dev.off()
+
+
+##################
+data.plot_offending <-
+  m.aggression_hit_prob$mfxest %>%
+  as_tibble() %>%
+  mutate(model = "aggression_hit") %>%
+  bind_rows(m.aggression_weapon_prob$mfxest %>%
+              as.tibble() %>%
+              mutate(model = "aggression_weapon")) %>%
+  bind_rows(m.theft_stolen_prob$mfxest %>%
+              as.tibble() %>%
+              mutate(model = "theft_stolen")) %>%
+  bind_rows(m.theft_taken_prob$mfxest %>%
+              as.tibble() %>%
+              mutate(model = "theft_taken")) %>%
+  mutate(model = factor(model, levels = c('aggression_hit', 'aggression_weapon', 'theft_stolen', 'theft_taken')),
+         ci.low = `dF/dx` - 2 *`Std. Err.`,
+         ci.upp = `dF/dx` + 2 *`Std. Err.`,
+         vars = c('white_GB' , 'male' , 'area_safety_14' , 'street_gang_14' , 'cannabis_use_14' , 'drinking_ever_14' , 
+                  'victim_threatened_14' , 'victim_violent_14' , 'victim_weapon_14' , 'victim_stolen_14' , 'police.stopped_14' , 
+                  'physical_aggression_hit_14' , 'physical_aggression_weapon_14' , 'theft_stolen_14' , 'theft_taken_14') %>% rep(4)
+  )
+  
+plot.results_offending <- ggplot(data.plot_offending, aes(y = `dF/dx`, x = vars, group = model, colour = model)) +
+  geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .75, position = position_dodge(), size = .75, lwd = .75, show.legend = T) +
+  ylim(-.1,.4) +
+  geom_hline(yintercept = 0, size = .75, color = 'darkgray') +
+  coord_flip() +
+  ylab("") + xlab("") +
+  ggtitle("Probability of police contact by age 14") +
+  labs(caption = 'Binomial logistic regression models estimated using maximum likelihood.
+                  Marginal effects at the mean (probability) 95% confidence intervals reported. \n
+
+                  n = 7524 for all three models') +
+  guides(colour = guide_legend(title = "")) +
+  theme(plot.title = element_text(hjust = .5, vjust = 2, colour = "#3C3C3C", size = 12)) +
+  theme(axis.text.y = element_text(colour = "#3C3C3C", size = 11),
+        axis.text.x = element_text(colour = "#3C3C3C", size = 8, margin = margin(0, 0, 0, 0))) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "#3C3C3C", size = .2),
+        legend.title = element_text(colour = "#3C3C3C", size = 12),
+        legend.text = element_text(colour = "#3C3C3C", size = 12),
+        strip.text.x = element_text(size = 10),
+        panel.spacing.x=unit(1, "lines"),
+        panel.spacing.y=unit(1, "lines"),
+        plot.caption = element_text(hjust = 1,margin = unit(c(0,0,0,0), "mm")),
+        plot.margin = margin(.5, 0, .5, 0, "cm")) +
+  theme(aspect.ratio = 3)
+
+plot.results_offending_stop <- ggplot(data.plot_offending %>% filter(vars == "police.stopped_14"), aes(y = `dF/dx`, x = vars, group = model, colour = model)) +
+  geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .25, position = position_dodge(), size = .75, lwd = 1, show.legend = T) +
+  ylim(-.1,.4) +
+  geom_hline(yintercept = 0, size = .75, color = 'darkgray') +
+  coord_flip() +
+  ylab("") + xlab("") +
+  ggtitle("Probability of police contact by age 14") +
+  labs(caption = 'Binomial logistic regression models estimated using maximum likelihood.
+                  Marginal effects at the mean (probability) 95% confidence intervals reported. \n
+
+                  n = 7524 for all three models') +
+  guides(colour = guide_legend(title = "")) +
+  theme(plot.title = element_text(hjust = .5, vjust = 2, colour = "#3C3C3C", size = 12)) +
+  theme(axis.text.y = element_text(colour = "#3C3C3C", size = 11),
+        axis.text.x = element_text(colour = "#3C3C3C", size = 8, margin = margin(0, 0, 0, 0))) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_blank(), axis.line = element_line(colour = "#3C3C3C", size = .2),
+        legend.title = element_text(colour = "#3C3C3C", size = 12),
+        legend.text = element_text(colour = "#3C3C3C", size = 12),
+        strip.text.x = element_text(size = 10),
+        panel.spacing.x=unit(1, "lines"),
+        panel.spacing.y=unit(1, "lines"),
+        plot.caption = element_text(hjust = 1,margin = unit(c(0,0,0,0), "mm")),
+        plot.margin = margin(.5, 0, .5, 0, "cm")) +
+  theme(aspect.ratio = 3)
+
