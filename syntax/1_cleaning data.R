@@ -57,6 +57,10 @@ dplyr::select(MCSID_updated, MCSID,
               
 )
 
+# read data: age 14 sweep 6 | parent income brackets | select relevant variables
+data14_parents <- read_stata("data/import/Age 14 sweep 6/UKDA-8156-stata/stata/stata13/mcs6_parent_income_brackets.dta")
+  
+
 # read data: age 17 sweep 7 | select relevant variables
 data17 <- read_stata("data/import/Age 17 sweep 7/UKDA-8682-stata/stata/stata13/mcs7_cm_interview.dta") %>%
   mutate(MCSID_updated = paste(MCSID, "_", GCNUM00, sep = "")) %>%
