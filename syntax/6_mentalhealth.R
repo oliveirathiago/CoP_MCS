@@ -2,7 +2,7 @@ library(tidyverse)
 library(haven)
 library(texreg)
 library(lavaan)
-
+library(mfx)
 
 # load dataset
 load("data/export/data_analysis.RData")
@@ -14,13 +14,17 @@ data.analysis <-
   data.analysis %>%
   mutate(
     # SELF-ESTEEM
-    mutate(across(c(FCSATI00:FCGDSF00, GCSATI00:GCGDSF00), ~case_when(
+    across(c(FCSATI00:FCGDSF00, GCSATI00:GCGDSF00), ~case_when(
       . == 1 ~ 4,
       . == 2 ~ 3,
       . == 3 ~ 2,
       . == 4 ~ 1,
       TRUE ~ NA_real_
-    ))),
+    )),
+    #
+    across(c(depression_age, psychological_distress, mental_wellbeing, internalising_behaviour, hyperactivity, conduct_problems), ~case_when(. < 0 ~ NA_real_, TRUE ~ .)),
+    across(c(depression_doctor, depression_current, depression_ever), ~ case_when(. == 1 ~ TRUE, TRUE ~ FALSE)),
+    depression_14older = case_when(depression_age > 13 ~ TRUE, TRUE ~ FALSE),
     # offending by age 14 | summative scale:
     offending_sum_14 = physical_aggression_hit_14 + physical_aggression_weapon_14 + theft_taken_14 + theft_stolen_14,
     # violent behaviour by 14:
@@ -46,39 +50,9 @@ data.analysis <-
     not.stopped_white = case_when(police.stopped_14 == FALSE & white_GB == TRUE ~ TRUE, TRUE ~ FALSE)
   ) 
 
-#########################################
-### Predicting changes in self-esteem ###
-#########################################
-
-auto_sem <-
-  '
-  self.esteem_14 =~ a * FCSATI00 + b * FCGDQL00 + c * FCDOWL00 + d * FCVALU00 + e * FCGDSF00
-  self.esteem_17 =~ a * GCSATI00 + b * GCGDQL00 + c * GCDOWL00 + d * GCVALU00 + e * GCGDSF00
-  
-  FCSATI00 ~~ GCSATI00
-  FCGDQL00 ~~ GCGDQL00
-  FCDOWL00 ~~ GCDOWL00
-  FCVALU00 ~~ GCVALU00
-  FCGDSF00 ~~ GCGDSF00
-  
-  self.esteem_17 ~ self.esteem_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + police.stopped_14 + offending_violent_14 + offending_theft_14
-  ' %>%
-  sem(data = data.analysis, estimator = "MLR", missing = "ML", std.lv = T)
-
-auto_sem_int <-
-  '
-  self.esteem_14 =~ a * FCSATI00 + b * FCGDQL00 + c * FCDOWL00 + d * FCVALU00 + e * FCGDSF00
-  self.esteem_17 =~ a * GCSATI00 + b * GCGDQL00 + c * GCDOWL00 + d * GCVALU00 + e * GCGDSF00
-  
-  FCSATI00 ~~ GCSATI00
-  FCGDQL00 ~~ GCGDQL00
-  FCDOWL00 ~~ GCDOWL00
-  FCVALU00 ~~ GCVALU00
-  FCGDSF00 ~~ GCGDSF00
-  
-  self.esteem_17 ~ stopped_white + stopped_non.white + not.stopped_non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14
-  ' %>%
-  sem(data = data.analysis, estimator = "MLR", missing = "ML", std.lv = T)
+#############################
+### Measuring self-esteem ###
+#############################
 
 
 data.analysis_CFA <-
@@ -107,8 +81,9 @@ data.analysis_CFA <-
 
 data.analysis <-
   data.analysis %>%
-  left_join(data.analysis_CFA %>% dplyr::select(MCSID_updated, self_esteem_change))
+  left_join(data.analysis_CFA %>% dplyr::select(MCSID_updated, self_esteem_change, self_esteem_14 = `1`, self_esteem_17 = `2`))
 
+## Models for self-esteem
 m.noint <- lm(self_esteem_change ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                         drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14, data.analysis)
 m.intwhite <- lm(self_esteem_change ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
@@ -116,41 +91,198 @@ m.intwhite <- lm(self_esteem_change ~ police.stopped_14 * white_GB + male + area
 m.intnonwhite <- lm(self_esteem_change ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14, data.analysis)
 
+## Models for depression
+m.depression_current.noint <- glm(depression_current ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                    drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                  data.analysis, family = binomial(link = 'logit'))
+m.depression_current.int <- glm(depression_current ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                    drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                  data.analysis, family = binomial(link = 'logit'))
+m.depression_current.int_non.white <- glm(depression_current ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                  drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                data.analysis, family = binomial(link = 'logit'))
+
+m.depression_14older.noint <- glm(depression_14older ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                    drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                  data.analysis, family = binomial(link = 'logit'))
+m.depression_14older.int <- glm(depression_14older ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                  drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                data.analysis, family = binomial(link = 'logit'))
+m.depression_14older.int_non.white <- glm(depression_14older ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                  drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                data.analysis, family = binomial(link = 'logit'))
+
+## Models for psychological_distress
+m.psychological_distress.noint <- lm(psychological_distress ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                    drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                  data.analysis)
+m.psychological_distress.int <- lm(psychological_distress ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                  drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                data.analysis)
+m.psychological_distress.int_non.white <- lm(psychological_distress ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                     drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                   data.analysis)
+
+## Models for mental_wellbeing
+m.mental_wellbeing.noint <- lm(mental_wellbeing ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                       drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                     data.analysis)
+m.mental_wellbeing.int <- lm(mental_wellbeing ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                     drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                   data.analysis)
+m.mental_wellbeing.int_non.white <- lm(mental_wellbeing ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                               drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                             data.analysis)
+
+## Models for internalising_behaviour
+m.internalising_behaviour.noint <- lm(internalising_behaviour ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                               data.analysis)
+m.internalising_behaviour.int <- lm(internalising_behaviour ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                               drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                             data.analysis)
+m.internalising_behaviour.int_non.white <- lm(internalising_behaviour ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                      drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                                    data.analysis)
+
+## Models for hyperactivity
+m.hyperactivity.noint <- lm(hyperactivity ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                               data.analysis)
+m.hyperactivity.int <- lm(hyperactivity ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                               drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                             data.analysis)
+m.hyperactivity.int_non.white <- lm(hyperactivity ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                            drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                          data.analysis)
+
+## Models for conduct_problems
+m.conduct_problems.noint <- lm(conduct_problems ~ police.stopped_14 + white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                               data.analysis)
+m.conduct_problems.int <- lm(conduct_problems ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                               drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                             data.analysis)
+m.conduct_problems.int_non.white <- lm(conduct_problems ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+                               drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
+                             data.analysis)
+
 list(
-  "No interaction" = m.noint,
-  "With an interaction term" = m.intwhite
-) %>% wordreg(ci.force = T, file = "tables/mentalheatl.docx")
+  "Self esteem" = m.noint,
+  "Self esteem" = m.intwhite,
+  "Depression" = m.depression_14older.noint,
+  "Depression" = m.depression_14older.int,
+  "Psychological distress" = m.psychological_distress.noint,
+  "Psychological distress" = m.psychological_distress.int,
+  "Mental wellbeing" = m.mental_wellbeing.noint,
+  "Mental wellbeing" = m.mental_wellbeing.int,
+  "Internalising behaviour" = m.internalising_behaviour.noint,
+  "Internalising behaviour" = m.internalising_behaviour.int,
+  "Hyperactivity" = m.hyperactivity.noint,
+  "Hyperactivity" = m.hyperactivity.int,
+  "Conduct problems" = m.conduct_problems.noint,
+  "Conduct problems" = m.conduct_problems.int
+) %>% wordreg(#ci.force = T, 
+              file = "tables/4_mentalhealth_coefficients.docx",
+              custom.gof.rows = list("Interaction term" = c("No", "Yes") %>% rep(7)))
+
+m.depression_14older.noint_prob <- logitmfx(m.depression_14older.noint, data = data.analysis, atmean = T)
+m.depression_14older.int_prob <- logitmfx(m.depression_14older.int, data = data.analysis, atmean = T)
+m.depression_14older.int_non.white_prob <- logitmfx(m.depression_14older.int_non.white, data = data.analysis, atmean = T)
 
 data.plot <-
   tibble(
-    coef = c(coef(m.noint)[2], coef(m.intwhite)[2], coef(m.intnonwhite)[2]),
-    ci.low = c(confint(m.noint)[2,1], confint(m.intwhite)[2,1], confint(m.intnonwhite)[2,1]),
-    ci.upp = c(confint(m.noint)[2,2], confint(m.intwhite)[2,2], confint(m.intnonwhite)[2,2]),
-    var = c("Changes in self-esteem") %>% rep(3),
-    main = c("all", "non-white", "white")
-  )
+    var = c('Self Esteem', 'Depression', 'Psychological Distress', 'Mental wellbeing', 'Internalised Behaviour',
+            'Hyperactivity', 'Conduct Problems') %>% rep(each = 3),
+    coef = c(
+      # self esteem
+      coef(m.noint)[2], coef(m.intwhite)[2], coef(m.intnonwhite)[2],
+      # depression
+      m.depression_14older.noint_prob$mfxest[1,1], m.depression_14older.int_prob$mfxest[1,1], m.depression_14older.int_non.white_prob$mfxest[1,1],
+      # psychological distress
+      coef(m.psychological_distress.noint)[2], coef(m.psychological_distress.int)[2], coef(m.psychological_distress.int_non.white)[2],
+      # mental wellbeing
+      coef(m.mental_wellbeing.noint)[2], coef(m.mental_wellbeing.int)[2], coef(m.mental_wellbeing.int_non.white)[2],
+      # internalising behaviour
+      coef(m.internalising_behaviour.noint)[2], coef(m.internalising_behaviour.int)[2], coef(m.internalising_behaviour.int_non.white)[2],
+      # hyperactivity
+      coef(m.hyperactivity.noint)[2], coef(m.hyperactivity.int)[2], coef(m.hyperactivity.int_non.white)[2],
+      # conduct problems
+      coef(m.conduct_problems.noint)[2], coef(m.conduct_problems.int)[2], coef(m.conduct_problems.int_non.white)[2]
+      ),
+    ci.low = c(
+      # self esteem
+      confint(m.noint)[2,1], confint(m.intwhite)[2,1], confint(m.intnonwhite)[2,1],
+      # depression
+          m.depression_14older.noint_prob$mfxest[1,1] - 1.96 * m.depression_14older.noint_prob$mfxest[1,2], 
+          m.depression_14older.int_prob$mfxest[1,1] - 1.96 * m.depression_14older.int_prob$mfxest[1,2], 
+          m.depression_14older.int_non.white_prob$mfxest[1,1] - 1.96 * m.depression_14older.int_non.white_prob$mfxest[1,2],
+      # psychological distress
+      confint(m.psychological_distress.noint)[2,1], confint(m.psychological_distress.int)[2,1], confint(m.psychological_distress.int_non.white)[2,1],
+      # mental wellbeing
+      confint(m.mental_wellbeing.noint)[2,1], confint(m.mental_wellbeing.int)[2,1], confint(m.mental_wellbeing.int_non.white)[2,1],
+      # internalising behaviour
+      confint(m.internalising_behaviour.noint)[2,1], confint(m.internalising_behaviour.int)[2,1], confint(m.internalising_behaviour.int_non.white)[2,1],
+      # hyperactivity
+      confint(m.hyperactivity.noint)[2,1], confint(m.hyperactivity.int)[2,1], confint(m.hyperactivity.int_non.white)[2,1],
+      # conduct problems
+      confint(m.conduct_problems.noint)[2,1], confint(m.conduct_problems.int)[2,1], confint(m.conduct_problems.int_non.white)[2,1]
+      ),
+    ci.upp = c(
+      # self esteem
+      confint(m.noint)[2,2], confint(m.intwhite)[2,2], confint(m.intnonwhite)[2,2],
+      # depression
+          m.depression_14older.noint_prob$mfxest[1,1] + 1.96 * m.depression_14older.noint_prob$mfxest[1,2], 
+          m.depression_14older.int_prob$mfxest[1,1] + 1.96 * m.depression_14older.int_prob$mfxest[1,2], 
+          m.depression_14older.int_non.white_prob$mfxest[1,1] + 1.96 * m.depression_14older.int_non.white_prob$mfxest[1,2],
+      # psychological distress
+      confint(m.psychological_distress.noint)[2,2], confint(m.psychological_distress.int)[2,2], confint(m.psychological_distress.int_non.white)[2,2],
+      # mental wellbeing
+      confint(m.mental_wellbeing.noint)[2,2], confint(m.mental_wellbeing.int)[2,2], confint(m.mental_wellbeing.int_non.white)[2,2],
+      # internalising behaviour
+      confint(m.internalising_behaviour.noint)[2,2], confint(m.internalising_behaviour.int)[2,2], confint(m.internalising_behaviour.int_non.white)[2,2],
+      # hyperactivity
+      confint(m.hyperactivity.noint)[2,2], confint(m.hyperactivity.int)[2,2], confint(m.hyperactivity.int_non.white)[2,2],
+      # conduct problems
+      confint(m.conduct_problems.noint)[2,2], confint(m.conduct_problems.int)[2,2], confint(m.conduct_problems.int_non.white)[2,2]
+    ),
+    main = c("all", "non-white", "white") %>% rep(7)
+  ) %>% 
+  mutate(var = factor(var, levels = c('Self Esteem', 'Depression', 'Psychological Distress', 'Mental wellbeing', 'Internalised Behaviour',
+                                      'Hyperactivity', 'Conduct Problems') %>% rev))
 
 # produce plot: interaction
 plot.results_interaction <- ggplot(data.plot, aes(y = coef, x = var, group = main, colour = main)) +
-  geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .25, position = position_dodge(), size = .8, lwd = .9, show.legend = T) +
-  geom_point(position = position_dodge(width = .25)) + 
-  ylim(-.5,.5) +
-  geom_hline(yintercept = 0, size = .75, color = 'darkgray') +
-  #coord_flip() +
+  geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .5, position = position_dodge(), size = .75, lwd = .5, show.legend = T) +
+  geom_point(position = position_dodge(width = .5), lwd = .5, size = .75) + 
+  ylim(-1.5,1.75) +
+  geom_hline(yintercept = 0, size = .2, color = 'darkgray') +
+  coord_flip() +
   ylab("") + xlab("") +
-  ggtitle("Effects of being stopped by the police by age 14 \n on changes in self-esteem* by age 17 \n") +
-  labs(caption = 'Linear change score model estimated
-                  Coefficients and 95% confidence intervals reported. \n
-                  * Scores of self-esteem derived from a pooled CFA model.
+  ggtitle("Effects of being stopped by the police by age 14 \n on various mental health indicators by age 17 \n") +
+  labs(caption = 'Each row in the y-axis indicates a different dependent variable for
+                  which two models (with and without an interaction term) were estimated.
+                  In total, results from 14 models are displayed in this Figure.\n
+                  Models for the dependent variable "Self Esteem" are linear change score 
+                  models, with self-esteem scores derived from a pooled CFA model.
                   Change scores between ages 17 and 14 computed.\n
-                  Models control for gender, perception of safety, gang membership by age 14,
-                  cannabis use by age 14, drinking by age 14, and victimisation by age 14. \n
+                  Models for the dependent variable "Depression" are binomial logistic
+                  regression models. Estimates displayed are marginal effects at the
+                  mean (in probability scale).\n
+                  Models for the other five dependent variables (psychological distress,
+                  mental wellbeing, internalised behaviour, hyperactivity, and conduct
+                  problems) are OLS models using psychometric derived scales.\n
+                  95% confidence intervals reported. Models control for self-esteem by
+                  age 14 (except for the self-esteem models, as those are linear change
+                  score models). All models control for gender, perception of safety, 
+                  gang membership by age 14, cannabis use by age 14, drinking by age 14, 
+                  and victimisation by age 14. \n
 
-                  n = 7524 for both models') +
+                  n = {7179; 7410} across all 14 models') + 
   guides(colour = guide_legend(title = "")) +
   theme(plot.title = element_text(hjust = .5, vjust = 2, colour = "#3C3C3C", size = 12)) +
-  theme(axis.text.y = element_text(colour = "#3C3C3C", size = 8),
-        axis.text.x = element_text(vjust = 125, colour = "#3C3C3C", size = 10.5)) +
+  theme(axis.text.y = element_text(colour = "#3C3C3C", size = 11),
+        axis.text.x = element_text(colour = "#3C3C3C", size = 8, margin = margin(0, 0, 0, 0))) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "#3C3C3C", size = .2),
         legend.title = element_text(colour = "#3C3C3C", size = 12),
@@ -160,11 +292,12 @@ plot.results_interaction <- ggplot(data.plot, aes(y = coef, x = var, group = mai
         panel.spacing.y=unit(1, "lines"),
         plot.caption = element_text(hjust = 1,margin = unit(c(0,0,0,0), "mm")),
         plot.margin = margin(.5, 0, .5, 0, "cm")) +
-  theme(aspect.ratio = 1) +
+  theme(aspect.ratio = 1.5) +
   scale_color_brewer(palette = "Set1",
                      limits = c('white', 'non-white', 'all'),
-                     labels = c('White', "Non-White", 'All respondents'))
-  
-pdf('plots/mental health plots.pdf')
+                     labels = c('White', "Black and other\nethnic minorities", "All"))
+
+
+pdf('plots/4_mental_health_interactions.pdf')
 plot.results_interaction
 dev.off()

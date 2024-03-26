@@ -81,6 +81,9 @@ data17 <- read_stata("data/import/Age 17 sweep 7/UKDA-8682-stata/stata/stata13/m
                 # self-steem
                 GCSATI00:GCGDSF00,
                 
+                # depression
+                depression_doctor = GCDEAN00, depression_age = GCDAGE00, depression_current = GCTRDE00, depression_ever = GCTRDV00,
+                
                 # health & risk-taking behaviours
                 cannabis_use_17 = GCDRUA00,
                 smoking_17 = GCSMOK00, smoking_age.started_17 = GCAGSM00, smoking_vaping_17 = GCVAPE00,
@@ -93,11 +96,31 @@ data17 <- read_stata("data/import/Age 17 sweep 7/UKDA-8682-stata/stata/stata13/m
                 gender = GCGNID00, sexual_minority = GCSXID00,
   )
 
+# read data: age 17 sweep 7 | select relevant variables
+data17_derived <- read_stata("data/import/Age 17 sweep 7/UKDA-8682-stata/stata/stata13/mcs7_cm_derived.dta") %>%
+  mutate(MCSID_updated = paste(MCSID, "_", GCNUM00, sep = "")) %>%
+  dplyr::select(MCSID_updated, MCSID,
+                
+                # psychological distress
+                psychological_distress = GDCKESSL,
+                
+                # mental wellbeing
+                mental_wellbeing = GDWEMWBS,
+                
+                # internalising behaviour
+                internalising_behaviour = GEMOTION_C,
+                
+                # externalising behaviour
+                hyperactivity = GHYPER_C, conduct_problems = GCONDUCT_C
+                
+  )
+
 # merge all three datasets
 masterdataset <-
   data14 %>%
   left_join(data14_derived, by = "MCSID_updated") %>%
-  left_join(data17, by = "MCSID_updated")
+  left_join(data17, by = "MCSID_updated") %>%
+  left_join(data17_derived, by = "MCSID_updated")
 
 # save merged data files in RData and SPSS formats
 save(masterdataset, file = "data/export/masterdataset.RData")
