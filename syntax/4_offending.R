@@ -53,7 +53,7 @@ m.offending_violence_autoreg <- glm(as.formula(paste('offending_violent_17', '~'
 m.offending_violence_int <- glm(as.formula(paste('offending_violent_17', '~', paste(covs_17), '+ offending_violent_14 + offending_theft_14 + police.stopped_14*white_GB')), data.analysis, family = binomial(link = 'logit'))
 
 m.offending_theft_nocontrol <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17))), data.analysis, family = binomial(link = 'logit'))
-m.offending_theft_autoreg <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17), '+ offending_theft_14 + offending_theft_14')), data.analysis, family = binomial(link = 'logit') )
+m.offending_theft_autoreg <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17), '+ offending_violent_14 + offending_theft_14')), data.analysis, family = binomial(link = 'logit') )
 m.offending_theft_int <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17), '+ offending_theft_14 + offending_theft_14 + police.stopped_14*white_GB')), data.analysis, family = binomial(link = 'logit'))
 
 # changing reference group for plots
