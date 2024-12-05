@@ -71,16 +71,17 @@ data.analysis <-
 #########################################
 
 # list of covariates
-covs_17 <- 'male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + police.stopped_14 + offending_violent_14 + offending_theft_14 + edu_irt_14'
+covs_17 <- 'male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + police.stopped_14 + offending_violent_14 + offending_theft_14'
+
+model.controls  <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + white_GB'))), data.analysis, family = binomial(link = 'logit'))
+model.all  <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + edu_irt_14 + white_GB'))), data.analysis, family = binomial(link = 'logit'))
+model.white  <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + edu_irt_14 + white_GB * police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
+model.non.white <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + edu_irt_14 + non.white * police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
 
 
-model.all  <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + white_GB'))), data.analysis, family = binomial(link = 'logit'))
-model.white  <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + white_GB * police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
-model.non.white <-glm(as.formula(paste('likely_uni_17.quartile', '~', paste(covs_17, ' + non.white * police.stopped_14'))), data.analysis, family = binomial(link = 'logit'))
+list(model.controls, model.all, model.white, model.non.white) %>% screenreg(ci.force = T)
 
-
-list(model.all, model.white, model.non.white) %>% screenreg(ci.force = T)
-
+model.controls.prob <- logitmfx(model.controls, data = data.analysis, atmean = T)
 model.all.prob <- logitmfx(model.all, data = data.analysis, atmean = T)
 model.white.prob <- logitmfx(model.white, data = data.analysis, atmean = T)
 model.non.white.prob <- logitmfx(model.non.white, data = data.analysis, atmean = T)
@@ -88,6 +89,7 @@ model.non.white.prob <- logitmfx(model.non.white, data = data.analysis, atmean =
 ## produce tables
 # reg coefficients
 list(
+  "Controls" = model.controls, 
   "No interaction" = model.all,
   "With an interaction" = model.white
 ) %>% wordreg(ci.force = T, 
@@ -95,6 +97,7 @@ list(
 
 # reg probability
 list(
+  "Controls" = model.controls.prob,
   "No interaction" = model.all.prob,
   "With an interaction" = model.white.prob
 ) %>% wordreg(ci.force = T, 
