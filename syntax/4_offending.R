@@ -58,10 +58,10 @@ m.offending_theft_int <- glm(as.formula(paste('offending_theft_17', '~', paste(c
 
 # changing reference group for plots
 
-covs_17_nonwhite <- 'non.white + male + area_safety_14 +  street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + police.stopped_14'
+covs_17_nonwhite <- 'ethnicity_asian + ethnicity_black + ethnicity_mixed + ethnicity_other + male + area_safety_14 +  street_gang_14 + cannabis_use_14 + drinking_ever_14 + victimisation_14 + police.stopped_14'
 
-m.offending_violence_int.nonwhite <- glm(as.formula(paste('offending_violent_17', '~', paste(covs_17_nonwhite), '+ offending_violent_14 + offending_theft_14 + police.stopped_14*non.white')), data.analysis, family = binomial(link = 'logit'))
-m.offending_theft_int.nonwhite <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17_nonwhite), '+ offending_theft_14 + offending_theft_14 + police.stopped_14*non.white')), data.analysis, family = binomial(link = 'logit'))
+m.offending_violence_int.nonwhite <- glm(as.formula(paste('offending_violent_17', '~', paste(covs_17_nonwhite), '+ offending_violent_14 + offending_theft_14 + police.stopped_14*ethnicity_black')), data.analysis, family = binomial(link = 'logit'))
+m.offending_theft_int.nonwhite <- glm(as.formula(paste('offending_theft_17', '~', paste(covs_17_nonwhite), '+ offending_theft_14 + offending_theft_14 + police.stopped_14*ethnicity_black')), data.analysis, family = binomial(link = 'logit'))
 
 # probability scale
 m.violence.all_prob <- logitmfx(m.offending_violence_nocontrol, data = data.analysis, atmean = T)
@@ -124,7 +124,7 @@ data.plot_interaction <-
       list_models[[5]]["police.stopped_14TRUE", 2], list_models[[6]]["police.stopped_14TRUE", 2]
     ),
     var = c(c("violent", "non-violent") %>% rep(each = 2), "violent", "non-violent"),
-    main = c(c('non-white', 'white') %>% rep(2), "all", "all")
+    main = c(c('black', 'white') %>% rep(2), "all", "all")
   ) %>%
   mutate(ci.low = prob - 1.96 * std.err,
          ci.upp = prob + 1.96 * std.err)
@@ -166,8 +166,8 @@ plot.results_interaction <- ggplot(data.plot_interaction, aes(y = prob, x = var,
                    breaks = c("violent", "non-violent") %>% rev,
                    labels = c('Violent\noffending behaviour', 'Non-violent\noffending behaviour') %>% rev) + 
   scale_color_brewer(palette = "Set1",
-                     limits = c('white', 'non-white', 'all'),
-                     labels = c('White', "Black and other\nethnic minorities", 'All respondents'))
+                     limits = c('white', 'black', 'all'),
+                     labels = c('White', "Black", 'All respondents'))
 
 pdf('plots/2_offending_interactions.pdf')
 plot.results_interaction

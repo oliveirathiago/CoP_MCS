@@ -140,6 +140,25 @@ data.analysis <-
            ethnicity == 4 ~ TRUE,
            TRUE ~ FALSE
          ),
+         ethnicity_grp1 = case_when(
+                 ethnicity %in% c(1, 2, 3, 4) ~ "White",
+                 ethnicity %in% c(14, 15, 16) ~ "Black",       # Black
+                 ethnicity %in% c(9, 10, 11, 12,13) ~ "Asian",       # Asian
+                 ethnicity %in% c(5,6,7,8) ~ "Mixed",       #  Mixed
+                 ethnicity %in% c(17, 18) ~ "Other",                # Arab, Other ethnic group
+                 TRUE ~ NA_character_                               
+               ),
+             ethnicity_asian = if_else(ethnicity_grp1 == "Asian", 1, 0),
+             ethnicity_black = if_else(ethnicity_grp1 == "Black", 1, 0),
+             ethnicity_mixed = if_else(ethnicity_grp1 == "Mixed", 1, 0),
+             ethnicity_other = if_else(ethnicity_grp1 == "Other", 1, 0),
+         ethnicity_grp2 = case_when(
+           ethnicity %in% c(1, 2, 3, 4) ~ "White",
+           ethnicity %in% c(14, 15, 16, 5, 6) ~ "Black",       # Black and mixed Black
+           ethnicity %in% c(9, 10, 11, 12, 13, 7) ~ "Asian",       # Asian and mixed Asian
+           ethnicity %in% c(17, 18, 8) ~ "Other",                # Arab, Other ethnic group, multiple Mixed categories
+           TRUE ~ NA_character_                               # Everything else set to NA
+         ), 
          white_GB = ethnicity == 1,
          area_safety_14 = na_if(area_safety_14, -9),
          area_safety_14 = na_if(area_safety_14, -8),

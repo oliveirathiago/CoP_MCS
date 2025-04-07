@@ -70,7 +70,8 @@ covs_14 <- 'male + area_safety_14 + carrying_knife_14 + offending_violent_14 + o
 
 
 # estimate regression models
-m.stop <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), '+ non.white')), data.analysis, family = binomial(link = 'logit'))
+m.stop <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), '+ ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other')), data.analysis, family = binomial(link = 'logit'))
 
 # estimate regression models with interaction terms (ref: nonWhite)
 m.stopXknife_white <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + white_GB + white_GB * carrying_knife_14')), data.analysis, family = binomial(link = 'logit'))
@@ -82,13 +83,19 @@ m.stopXcannabis_white <- glm(as.formula(paste('police.stopped_14', '~', paste(co
 m.stopXdrinking_white <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + white_GB + white_GB * drinking_ever_14')), data.analysis, family = binomial(link = 'logit'))
 
 # estimate regression models with interaction terms (ref: White) (saving those models for plot purposes)
-m.stopXknife_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * carrying_knife_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXknife_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black * carrying_knife_14')), data.analysis, family = binomial(link = 'logit'))
 #m.stopXoffending_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * offending_sum_14')), data.analysis, family = binomial(link = 'logit'))
-m.stopXoffendingviolence_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * offending_violent_14')), data.analysis, family = binomial(link = 'logit'))
-m.stopXoffendingtheft_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * offending_theft_14')), data.analysis, family = binomial(link = 'logit'))
-m.stopXgang_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * street_gang_14')), data.analysis, family = binomial(link = 'logit'))
-m.stopXcannabis_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * cannabis_use_14')), data.analysis, family = binomial(link = 'logit'))
-m.stopXdrinking_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' + non.white + non.white * drinking_ever_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXoffendingviolence_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black * offending_violent_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXoffendingtheft_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black * offending_theft_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXgang_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black * street_gang_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXcannabis_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black  * cannabis_use_14')), data.analysis, family = binomial(link = 'logit'))
+m.stopXdrinking_nonwhite <- glm(as.formula(paste('police.stopped_14', '~', paste(covs_14), ' +  ethnicity_asian + ethnicity_black +
+                               ethnicity_mixed + ethnicity_other + ethnicity_black * drinking_ever_14')), data.analysis, family = binomial(link = 'logit'))
 
 # save results in probability scale
 m.stop_prob <- logitmfx(m.stop, data = data.analysis, atmean = T)
@@ -141,11 +148,12 @@ data.plot_simple <-
   as_tibble() %>%
   mutate(ci.low = `dF/dx` - 1.96 *`Std. Err.`,
          ci.upp = `dF/dx` + 1.96 *`Std. Err.`,
-         vars = c('male', 'safety', 'knife', 'offending: violence', 'offending: theft', 'gang', 'cannabis', 'drinking', 'victimisation', 'non-white')
-  )
+         vars = c('male', 'safety', 'knife', 'offending: violence', 'offending: theft', 'gang', 'cannabis', 'drinking', 'victimisation', 
+                  'ethnicity_asian',  'ethnicity_black', 'ethnicity_mixed', 'ethnicity_other'))
+  
 
 # produce plot: no interaction
-plot.results_simple <- ggplot(data.plot_simple %>% filter(vars != c('male', 'safety', 'victimisation'))
+plot.results_simple <- ggplot(data.plot_simple %>% filter(!vars %in% c('male', 'safety', 'victimisation'))
                          , aes(y = `dF/dx`, x = vars)) +
   geom_errorbar(aes(ymin = ci.low, ymax = ci.upp), width = .25, position = position_dodge(), size = .75, lwd = .75, show.legend = T) +
   geom_point(position = position_dodge(width = .25)) + 
@@ -173,9 +181,9 @@ plot.results_simple <- ggplot(data.plot_simple %>% filter(vars != c('male', 'saf
         plot.caption = element_text(hjust = 1,margin = unit(c(0,0,0,0), "mm")),
         plot.margin = margin(.5, 0, .5, 0, "cm")) +
   theme(aspect.ratio = 1.5) +
-  scale_x_discrete(limits = c('non-white', 'offending: violence', 'offending: theft', 'knife', 'gang', 'cannabis', 'drinking') %>% rev(),
-                   breaks = c('non-white', 'offending: violence', 'offending: theft', 'knife', 'gang', 'cannabis', 'drinking') %>% rev(),
-                   labels = c('Black and other\nethnic minorities', 'Violent\noffending behaviour', 'Non-violent\noffending behaviour', 
+  scale_x_discrete(limits = c('ethnicity_asian',  'ethnicity_black', 'ethnicity_mixed', 'ethnicity_other', 'offending: violence', 'offending: theft', 'knife', 'gang', 'cannabis', 'drinking') %>% rev(),
+                   breaks = c('ethnicity_asian',  'ethnicity_black', 'ethnicity_mixed', 'ethnicity_other', 'offending: violence', 'offending: theft', 'knife', 'gang', 'cannabis', 'drinking') %>% rev(),
+                   labels = c('Asian',  'Black', 'Mixed', 'Other Ethnicity', 'Violent\noffending behaviour', 'Non-violent\noffending behaviour', 
                               'Carrying knife', 'Street gang', 'Using cannabis', 'Drinking') %>% rev())
 
 # data for plot: interaction
@@ -197,7 +205,7 @@ data.plot_interaction <-
       list_models[[7]][3, 2], list_models[[8]][4, 2], list_models[[9]][5, 2], list_models[[10]][6, 2], list_models[[11]][7, 2], list_models[[12]][8, 2]
     ),
     var = c('knife', 'offending: violence', 'offending: theft', 'gang', 'cannabis', 'drinking') %>% rep(2),
-    main = c('non-white', 'white') %>% rep(each = 6)
+    main = c('Black', 'white') %>% rep(each = 6)
   ) %>%
   mutate(ci.low = prob - 1.96 * std.err,
          ci.upp = prob + 1.96 * std.err)
@@ -235,10 +243,10 @@ plot.results_interaction <- ggplot(data.plot_interaction, aes(y = prob, x = var,
                    labels = c('Violent\noffending behaviour', 'Non-violent\noffending behaviour', 'Carrying knife', 
                               'Street gang', 'Using cannabis', 'Drinking') %>% rev()) + 
   scale_color_brewer(palette = "Set1",
-                     limits = c('white', 'non-white'),
-                     labels = c('White', "Black and other\nethnic minorities"))
+                     limits = c('white', 'Black'),
+                     labels = c('White', "Black"))
 
-
+plot.results_interaction
 # save results in pdf format in a subfolder named 'plots'
 pdf('plots/1_policecontact14_simple.pdf')
 plot.results_simple

@@ -44,11 +44,17 @@ data.analysis <-
     # changing reference of the ethnicity-binary variable
     non.white = white_GB == F,
     # manually computing interaction groups
-    stopped_white = case_when(police.stopped_14 == TRUE & white_GB == TRUE ~ TRUE, TRUE ~ FALSE),
-    stopped_non.white = case_when(police.stopped_14 == TRUE & white_GB == FALSE ~ TRUE, TRUE ~ FALSE),
-    not.stopped_non.white = case_when(police.stopped_14 == FALSE & white_GB == FALSE ~ TRUE, TRUE ~ FALSE),
-    not.stopped_white = case_when(police.stopped_14 == FALSE & white_GB == TRUE ~ TRUE, TRUE ~ FALSE)
-  ) 
+    # stopped_white = case_when(police.stopped_14 == TRUE & white_GB == TRUE ~ TRUE, TRUE ~ FALSE),
+    # stopped_non.white = case_when(police.stopped_14 == TRUE & white_GB == FALSE ~ TRUE, TRUE ~ FALSE),
+    # not.stopped_non.white = case_when(police.stopped_14 == FALSE & white_GB == FALSE ~ TRUE, TRUE ~ FALSE),
+    # not.stopped_white = case_when(police.stopped_14 == FALSE & white_GB == TRUE ~ TRUE, TRUE ~ FALSE)
+    stopped_white = police.stopped_14 == TRUE & white_GB == TRUE,
+    stopped_black = police.stopped_14 == TRUE & ethnicity_black == 1,
+    not.stopped_black = police.stopped_14 == FALSE & ethnicity_black == 1,
+    not.stopped_white = police.stopped_14 == FALSE & white_GB == TRUE
+    )
+    
+
 
 #############################
 ### Measuring self-esteem ###
@@ -88,7 +94,8 @@ m.noint <- lm(self_esteem_change ~ police.stopped_14 + white_GB + male + area_sa
                         drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14, data.analysis)
 m.intwhite <- lm(self_esteem_change ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14, data.analysis)
-m.intnonwhite <- lm(self_esteem_change ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.intnonwhite <- lm(self_esteem_change ~ police.stopped_14 * ethnicity_black +  ethnicity_asian + ethnicity_black +
+                      ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                 drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14, data.analysis)
 
 ## Models for depression
@@ -98,7 +105,8 @@ m.depression_current.noint <- glm(depression_current ~ police.stopped_14 + white
 m.depression_current.int <- glm(depression_current ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                     drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                   data.analysis, family = binomial(link = 'logit'))
-m.depression_current.int_non.white <- glm(depression_current ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.depression_current.int_non.white <- glm(depression_current ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                            ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                   drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                 data.analysis, family = binomial(link = 'logit'))
 
@@ -108,7 +116,8 @@ m.depression_14older.noint <- glm(depression_14older ~ police.stopped_14 + white
 m.depression_14older.int <- glm(depression_14older ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                   drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                 data.analysis, family = binomial(link = 'logit'))
-m.depression_14older.int_non.white <- glm(depression_14older ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.depression_14older.int_non.white <- glm(depression_14older ~ police.stopped_14 *ethnicity_black + ethnicity_asian + ethnicity_black +
+                                            ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                   drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                 data.analysis, family = binomial(link = 'logit'))
 
@@ -119,7 +128,8 @@ m.psychological_distress.noint <- lm(psychological_distress ~ police.stopped_14 
 m.psychological_distress.int <- lm(psychological_distress ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                   drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                 data.analysis)
-m.psychological_distress.int_non.white <- lm(psychological_distress ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.psychological_distress.int_non.white <- lm(psychological_distress ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                               ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                      drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                    data.analysis)
 
@@ -130,7 +140,8 @@ m.mental_wellbeing.noint <- lm(mental_wellbeing ~ police.stopped_14 + white_GB +
 m.mental_wellbeing.int <- lm(mental_wellbeing ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                      drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                    data.analysis)
-m.mental_wellbeing.int_non.white <- lm(mental_wellbeing ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.mental_wellbeing.int_non.white <- lm(mental_wellbeing ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                         ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                              data.analysis)
 
@@ -141,7 +152,8 @@ m.internalising_behaviour.noint <- lm(internalising_behaviour ~ police.stopped_1
 m.internalising_behaviour.int <- lm(internalising_behaviour ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                              data.analysis)
-m.internalising_behaviour.int_non.white <- lm(internalising_behaviour ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.internalising_behaviour.int_non.white <- lm(internalising_behaviour ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                                ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                       drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                                     data.analysis)
 
@@ -152,7 +164,8 @@ m.hyperactivity.noint <- lm(hyperactivity ~ police.stopped_14 + white_GB + male 
 m.hyperactivity.int <- lm(hyperactivity ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                              data.analysis)
-m.hyperactivity.int_non.white <- lm(hyperactivity ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.hyperactivity.int_non.white <- lm(hyperactivity ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                      ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                             drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                           data.analysis)
 
@@ -163,7 +176,8 @@ m.conduct_problems.noint <- lm(conduct_problems ~ police.stopped_14 + white_GB +
 m.conduct_problems.int <- lm(conduct_problems ~ police.stopped_14 * white_GB + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                              data.analysis)
-m.conduct_problems.int_non.white <- lm(conduct_problems ~ police.stopped_14 * non.white + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
+m.conduct_problems.int_non.white <- lm(conduct_problems ~ police.stopped_14 * ethnicity_black + ethnicity_asian + ethnicity_black +
+                                         ethnicity_mixed + ethnicity_other + male + area_safety_14 + carrying_knife_14 + street_gang_14 + cannabis_use_14 + 
                                drinking_ever_14 + victimisation_14 + offending_violent_14 + offending_theft_14 + self_esteem_14,
                              data.analysis)
 
@@ -246,7 +260,7 @@ data.plot <-
       # conduct problems
       confint(m.conduct_problems.noint)[2,2], confint(m.conduct_problems.int)[2,2], confint(m.conduct_problems.int_non.white)[2,2]
     ),
-    main = c("all", "non-white", "white") %>% rep(7)
+    main = c("all", "black", "white") %>% rep(7)
   ) %>% 
   mutate(var = factor(var, levels = c('Self Esteem', 'Depression', 'Psychological Distress', 'Mental wellbeing', 'Internalised Behaviour',
                                       'Hyperactivity', 'Conduct Problems') %>% rev))
@@ -294,8 +308,8 @@ plot.results_interaction <- ggplot(data.plot, aes(y = coef, x = var, group = mai
         plot.margin = margin(.5, 0, .5, 0, "cm")) +
   theme(aspect.ratio = 1.5) +
   scale_color_brewer(palette = "Set1",
-                     limits = c('white', 'non-white', 'all'),
-                     labels = c('White', "Black and other\nethnic minorities", "All"))
+                     limits = c('white', 'black', 'all'),
+                     labels = c('White', "Black", "All"))
 
 
 pdf('plots/4_mental_health_interactions.pdf')
